@@ -1,83 +1,53 @@
 import streamlit as st
-import joblib
 import pandas as pd
+import pickle
 
-model = joblib.load("xgbmodel.pkl")
-feature_columns = joblib.load("model_features.pkl")
+# Load your trained model
+@st.cache_resource
+def load_model():
+    with open("model.pkl", "rb") as file:
+        model = pickle.load(file)
+    return model
 
-st.title("🛒 Customer Churn Prediction - Walmart Style")
-st.markdown("Enter customer details below:")
+model = load_model()
 
-gender = st.selectbox("Gender", ["Male", "Female", "Other"])
-age = st.slider("Age", 18, 70, 30)
-city_tier = st.selectbox("City Tier", [1, 2, 3])
-tenure = st.slider("Tenure (months)", 1, 60, 12)
-monthly_spend = st.slider("Avg Monthly Spend (₹)", 500, 15000, 4000)
-last_purchase = st.slider("Days Since Last Purchase", 0, 180, 30)
-frequency = st.slider("Monthly Purchase Frequency", 1, 20, 3)
-category = st.selectbox("Preferred Category", ["Grocery", "Electronics", "Clothing", "Home", "Beauty", "Sports"])
-premium = st.selectbox("Is Premium Member?", ["Yes", "No"])
-online = st.selectbox("Prefers Online Shopping?", ["Yes", "No"])
-tickets = st.slider("Support Tickets Filed", 0, 10, 1)
-satisfaction = st.slider("Satisfaction Score (1-5)", 1, 5, 3)
+st.title("🛒 Walmart Customer Churn Prediction App")
 
-gender_map = {"Male": 0, "Female": 1, "Other": 2}
-category_map = {"Grocery": 0, "Electronics": 1, "Clothing": 2, "Home": 3, "Beauty": 4, "Sports": 5}
-premium_map = {"Yes": 1, "No": 0}
-online_map = {"Yes": 1, "No": 0}
+st.markdown("""
+Welcome to the **Walmart Churn Predictor**.  
+Provide some basic customer details, and we’ll predict if the customer is likely to stop shopping at Walmart.
+""")
 
-promo_response = 0.3
-seasonal_score = 0.6
+MonthsAsCustomer = st.slider("Months as a Customer", 1, 72, 24)
+AvgMonthlySpend = st.number_input("Average Monthly Spend (₹)", 100.0, 10000.0, 500.0)
+MembershipType = st.selectbox("Membership Type", ["Month-to-month", "One year", "Two year"])
+CustomerSupportUsage = st.selectbox("Customer Support Usage", ["Yes", "No"])
+OnlinePreference = st.selectbox("Online Shopping Preference", ["DSL", "Fiber optic", "No"])
+PreferredPaymentMethod = st.selectbox("Preferred Payment Method", [
+    "Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"
+])
 
-total_lifetime_value = monthly_spend * tenure
-avg_order_value = monthly_spend / frequency
-rfm_score = 7  
-spend_per_visit = monthly_spend / frequency
-tenure_per_age = tenure / age
-spend_per_tenure = monthly_spend / tenure
-satisfaction_per_ticket = satisfaction / (tickets + 1)
-engagement_score = promo_response * 0.3 + seasonal_score * 0.3 + (satisfaction / 5) * 0.4
-high_value = int(monthly_spend > 6000 or premium_map[premium] == 1)
-high_risk = int(last_purchase > 60 or satisfaction <= 2 or tickets >= 2)
-customer_segment = 2  
+user_input = pd.DataFrame([{
+    'MonthsAsCustomer': MonthsAsCustomer,
+    'AvgMonthlySpend': AvgMonthlySpend,
+    'MembershipType': MembershipType,
+    'CustomerSupportUsage': CustomerSupportUsage,
+    'OnlinePreference': OnlinePreference,
+    'PreferredPaymentMethod': PreferredPaymentMethod
+}])
 
-input_dict = {
-    'Age': age,
-    'CityTier': city_tier,
-    'Tenure': tenure,
-    'AvgMonthlySpend': monthly_spend,
-    'LastPurchaseDaysAgo': last_purchase,
-    'PurchaseFrequency': frequency,
-    'IsPremiumMember': premium_map[premium],
-    'OnlinePreference': online_map[online],
-    'SupportTickets': tickets,
-    'SatisfactionScore': satisfaction,
-    'PromoResponseRate': promo_response,
-    'SeasonalShoppingScore': seasonal_score,
-    'TotalLifetimeValue': total_lifetime_value,
-    'AvgOrderValue': avg_order_value,
-    'RFM_Score': rfm_score,
-    'SpendPerVisit': spend_per_visit,
-    'TenurePerAge': tenure_per_age,
-    'SpendPerTenure': spend_per_tenure,
-    'SatisfactionPerTicket': satisfaction_per_ticket,
-    'EngagementScore': engagement_score,
-    'HighValueCustomer': high_value,
-    'HighRiskFlag': high_risk,
-    'CustomerSegment': customer_segment,
-    'Gender_Encoded': gender_map[gender],
-    'Category_Encoded': category_map[category]
-}
+model_input = user_input.rename(columns={
+    'MonthsAsCustomer': 'tenure',
+    'AvgMonthlySpend': 'MonthlyCharges',
+    'MembershipType': 'Contract',
+    'CustomerSupportUsage': 'TechSupport',
+    'OnlinePreference': 'InternetService',
+    'PreferredPaymentMethod': 'PaymentMethod'
+})
 
-input_df = pd.DataFrame([input_dict])
-
-input_df = input_df[feature_columns]
-
-if st.button("🔍 Predict Churn"):
-    pred = model.predict(input_df)[0]
-    proba = model.predict_proba(input_df)[0][1]
-
-    if pred == 1:
-        st.error(f"⚠️ This customer is likely to churn. (Probability: {proba:.2f})")
+if st.button("Predict Churn"):
+    prediction = model.predict(model_input)[0]
+    if prediction == "Yes":
+        st.error("⚠️ This customer is likely to churn!")
     else:
-        st.success(f"✅ This customer is likely to stay. (Probability of churn: {proba:.2f})")
+        st.success("✅ This customer is likely to stay.")
