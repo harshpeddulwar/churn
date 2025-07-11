@@ -2,7 +2,7 @@ import streamlit as st
 import joblib
 import numpy as np
 
-model = joblib.load("xgb_churn_model.pkl")
+model = joblib.load("xgbmodel.pkl")
 
 st.title("🛒 Customer Churn Prediction - Walmart Style")
 st.markdown("Enter customer details below:")
