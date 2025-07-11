@@ -1,0 +1,10 @@
+/venv
+/gender_map.pkl
+/category_map.pkl
+/walmart_churn_test.csv
+/walmart_churn_train.csv
+/walmart_churn_full.csv
+/tempcodeRunnerFile.py
+*.ipynb
+
+
