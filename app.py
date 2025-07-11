@@ -6,8 +6,8 @@ import pandas as pd
 st.title("🛒 Customer Churn Prediction - Walmart Style")
 st.markdown("Enter customer details below:")
 
-model = joblib.load("xgb_churn_model.pkl")
-feature_columns = joblib.load("features.pkl")
+model = joblib.load("xgbmodel.pkl")
+feature_columns = joblib.load("model_features.pkl")
 
 
 gender = st.selectbox("Gender", ["Male", "Female", "Other"])
